@@ -4,6 +4,8 @@ import type { TokenDocumentPF2e } from "@scene/index.ts";
 import { ErrorPF2e } from "@util";
 import type { CombatantSource } from "types/foundry/common/documents/combatant.d.ts";
 import type { EncounterPF2e } from "./index.ts";
+import { RollNotePF2e } from "@module/notes.ts";
+import { ChatMessagePF2e } from "@module/chat-message/index.ts";
 
 class CombatantPF2e<
     TParent extends EncounterPF2e | null = EncounterPF2e | null,
@@ -132,6 +134,16 @@ class CombatantPF2e<
             for (const effect of actor.familiar.itemTypes.effect) {
                 await effect.onEncounterEvent(eventType);
             }
+        }
+
+        const rollOptions = actor.getRollOptions();
+        const notes = actor.synthetics.rollNotes.startTurn?.filter((n) => n.predicate.test(rollOptions)) ?? [];
+        const msg = RollNotePF2e.notesToHTML(notes)?.outerHTML;
+        if (msg) {
+            const flavor = `<h4><strong>Turn Start</h4></strong><div>${msg}</div>`;
+            const speaker = ChatMessagePF2e.getSpeaker({ actor: this.actor, token: this.token });
+            ChatMessagePF2e.create({ flavor, speaker });
+            console.log(msg);
         }
 
         Hooks.callAll("pf2e.startTurn", this, encounter, game.user.id);
